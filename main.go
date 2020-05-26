@@ -3,10 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os/exec"
 	"sync"
 	"time"
 
@@ -17,42 +18,49 @@ import (
 )
 
 type Packet struct {
-	IPLayer  IPLayer  `json:iplayer`
-	TCPLayer TCPLayer `json:tcplayer`
+	IPLayer  IPLayer
+	TCPLayer TCPLayer
 }
 
 type IPLayer struct {
-	SrcIP      string `json:srcip`
-	DstIP      string `json:dstip`
-	Version    uint8  `json:version`
-	IHL        uint8  `json:ihl`
-	TOS        uint8  `json:tos`
-	Length     uint16 `json:length`
-	ID         uint16 `json:id`
-	Flags      string `json:flags`
-	FragOffset uint16 `json:frag_offeset`
-	TTL        uint8  `json:ttl`
+	SrcIP      string
+	DstIP      string
+	Version    uint8
+	IHL        uint8
+	TOS        uint8
+	Length     uint16
+	ID         uint16
+	Flags      string
+	FragOffset uint16
+	TTL        uint8
 }
 
 type TCPLayer struct {
-	SrcPort      string `json:srcport`
-	DstPost      string `json:dstport`
-	Seq          uint32 `json:seq`
-	Ack          uint32 `json:ack`
-	DataOffset   uint8  `json:data_offset`
-	Window       uint16 `json:window`
-	Checksum     uint16 `json:checksum`
-	Urgent       uint16 `json:urgent`
-	HeaderLength int    `json:header_length`
-	FlagFIN      bool   `json:flag_fin`
-	FlagSYN      bool   `json:flag_sin`
-	FlagRST      bool   `json:flag_rst`
-	FlagPSH      bool   `json:flag_psh`
-	FlagACK      bool   `json:flag_ack`
-	FlagURG      bool   `json:flag_urg`
-	FlagECE      bool   `json:flag_ece`
-	FlagCWR      bool   `json:flag_cwr`
-	FlagNS       bool   `json:flag_ns`
+	SrcPort      string
+	DstPost      string
+	Seq          uint32
+	Ack          uint32
+	DataOffset   uint8
+	Window       uint16
+	Checksum     uint16
+	Urgent       uint16
+	HeaderLength int
+	FlagFIN      bool
+	FlagSYN      bool
+	FlagRST      bool
+	FlagPSH      bool
+	FlagACK      bool
+	FlagURG      bool
+	FlagECE      bool
+	FlagCWR      bool
+	FlagNS       bool
+}
+
+type MLServerResponse struct {
+	Flag    uint8
+	IP      string
+	Message string
+	Err     error
 }
 
 func main() {
@@ -63,7 +71,7 @@ func main() {
 	processResults := make(chan []byte)
 
 	networkJobs := make(chan []byte)
-	networkResults := make(chan error)
+	networkResults := make(chan MLServerResponse)
 
 	go processWorker(processJobs, processResults)
 	go networkWorker(networkJobs, networkResults)
@@ -89,10 +97,9 @@ func main() {
 	}()
 
 	go func() {
-		for err := range networkResults {
-			if err != nil {
-				fmt.Println(err)
-			}
+		for resp := range networkResults {
+			fmt.Println(resp)
+			processResponse(resp)
 		}
 	}()
 	wg.Wait()
@@ -106,27 +113,29 @@ func processWorker(jobs <-chan gopacket.Packet, results chan<- []byte) {
 	close(results)
 }
 
-func networkWorker(jobs <-chan []byte, results chan<- error) {
+func networkWorker(jobs <-chan []byte, results chan<- MLServerResponse) {
 	for bytes := range jobs {
 		results <- sendPackets(bytes)
 	}
 	close(results)
 }
 
-func sendPackets(data []byte) error {
+func sendPackets(data []byte) MLServerResponse {
 	req, _ := http.NewRequest("POST", "http://localhost:4000", bytes.NewBuffer(data))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		log.Fatal(err)
+		return MLServerResponse{Err: err}
 	}
-	if resp.StatusCode != 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(string(body))
-	}
-	return nil
+	serverResponse := MLServerResponse{}
+	responseBody, _ := ioutil.ReadAll(resp.Body)
+	json.Unmarshal(responseBody, &serverResponse)
+
+	return serverResponse
+
 }
 
 func processPacket(packet gopacket.Packet) []byte {
@@ -176,8 +185,8 @@ func processPacket(packet gopacket.Packet) []byte {
 
 	}
 	var data struct {
-		ProcessedPacket Packet `json:processed_packet`
-		RawPacket       string `json:raw_packet`
+		ProcessedPacket Packet
+		RawPacket       string
 	}
 	data.ProcessedPacket = Packet{
 		IPLayer:  iplayerinterface,
@@ -187,4 +196,29 @@ func processPacket(packet gopacket.Packet) []byte {
 	dataJSON, _ := json.Marshal(data)
 	return dataJSON
 
+}
+
+func blockIP(IP string) {
+	app := "iptables"
+	arg0 := "-A"
+	arg1 := "INPUT"
+	arg2 := "-s"
+	arg3 := IP
+	arg4 := "-j"
+	arg5 := "DROP"
+	cmd := exec.Command(app, arg0, arg1, arg2, arg3, arg4, arg5)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("command err", err)
+	}
+}
+
+func processResponse(resp MLServerResponse) {
+	//check for errors
+	//check flag
+	//check ip
+	//if flag = 3 call blockIP
+	//else if flag = 2 inform user
+	//else if flag = 1 all cool
+	//log message from the server
 }
