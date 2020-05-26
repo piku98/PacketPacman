@@ -73,7 +73,13 @@ func main() {
 	networkJobs := make(chan []byte)
 	networkResults := make(chan MLServerResponse)
 
+	//worker go functions (threads) for processing packet the data. Extracts data from packets in the queue from the channel concurrently.
+	//Increase number of these functions depending on the load. In high load conditions 4 or 5 concurrent workers maybe required
 	go processWorker(processJobs, processResults)
+	go processWorker(processJobs, processResults)
+
+	//worker go functions for handling requests to ML server. Increase number of functions for high load.
+	go networkWorker(networkJobs, networkResults)
 	go networkWorker(networkJobs, networkResults)
 
 	handle, err := pcap.OpenLive("wlp2s0", 1024, false, time.Second*1)
