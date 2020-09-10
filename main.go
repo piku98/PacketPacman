@@ -220,7 +220,7 @@ func blockIP(IP string) {
 }
 
 func processResponse(resp MLServerResponse) {
-	//check for errors
+	//check for error
 	//check flag
 	//check ip
 	//if flag = 3 call blockIP
