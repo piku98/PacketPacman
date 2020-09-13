@@ -10,58 +10,63 @@ import (
 	"os/exec"
 	"sync"
 	"time"
-
+	
+        "gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/model"
+        //"gitlab.com/clientsidetest/model" 
 	"github.com/google/gopacket/layers"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 )
+/*
+func processIPlayer(// see type) 
+{
+	ip, _ := iplayer.(*layers.IPv4)
+		iplayerinterface = IPLayer{
+			SrcIP:      ip.SrcIP.String(),
+			DstIP:      ip.DstIP.String(),
+			Version:    ip.Version,
+			IHL:        ip.IHL,
+			TOS:        ip.TOS,
+			Length:     ip.Length,
+			ID:         ip.Id,
+			Flags:      ip.Flags.String(),
+			FragOffset: ip.FragOffset,
+			TTL:        ip.TTL,
+		}
 
-type Packet struct {
-	IPLayer  IPLayer
-	TCPLayer TCPLayer
+
 }
 
-type IPLayer struct {
-	SrcIP      string
-	DstIP      string
-	Version    uint8
-	IHL        uint8
-	TOS        uint8
-	Length     uint16
-	ID         uint16
-	Flags      string
-	FragOffset uint16
-	TTL        uint8
-}
+func processTCPlayer()
+{
 
-type TCPLayer struct {
-	SrcPort      string
-	DstPost      string
-	Seq          uint32
-	Ack          uint32
-	DataOffset   uint8
-	Window       uint16
-	Checksum     uint16
-	Urgent       uint16
-	HeaderLength int
-	FlagFIN      bool
-	FlagSYN      bool
-	FlagRST      bool
-	FlagPSH      bool
-	FlagACK      bool
-	FlagURG      bool
-	FlagECE      bool
-	FlagCWR      bool
-	FlagNS       bool
-}
+	tcp, _ := tcplayer.(*layers.TCP)
 
-type MLServerResponse struct {
-	Flag    uint8
-	IP      string
-	Message string
-	Err     error
+		tcplayerinterface = TCPLayer{
+			SrcPort:      tcp.SrcPort.String(),
+			DstPost:      tcp.DstPort.String(),
+			Seq:          tcp.Seq,
+			Ack:          tcp.Ack,
+			DataOffset:   tcp.DataOffset,
+			Window:       tcp.Window,
+			Checksum:     tcp.Checksum,
+			Urgent:       tcp.Urgent,
+			HeaderLength: len(tcp.Contents),
+			FlagFIN:      tcp.FIN,
+			FlagSYN:      tcp.SYN,
+			FlagRST:      tcp.RST,
+			FlagPSH:      tcp.PSH,
+			FlagACK:      tcp.ACK,
+			FlagURG:      tcp.URG,
+			FlagECE:      tcp.ECE,
+			FlagCWR:      tcp.CWR,
+			FlagNS:       tcp.NS,
+		}
+
+
 }
+ */
 
 func main() {
 	var wg sync.WaitGroup
@@ -76,13 +81,13 @@ func main() {
 	//worker go functions (threads) for processing packet the data. Extracts data from packets in the queue from the channel concurrently.
 	//Increase number of these functions depending on the load. In high load conditions 4 or 5 concurrent workers maybe required
 	go processWorker(processJobs, processResults)
-	go processWorker(processJobs, processResults)
+	go processWorker(processJobs, processResults) // dynamic creation of new process workers in seperate go routine
 
 	//worker go functions for handling requests to ML server. Increase number of functions for high load.
 	go networkWorker(networkJobs, networkResults)
 	go networkWorker(networkJobs, networkResults)
 
-	handle, err := pcap.OpenLive("wlp2s0", 1024, false, time.Second*1)
+	handle, err := pcap.OpenLive("eth0", 1024, false, time.Second*1) //support for various interfaces
 	if err != nil {
 		panic(err)
 	}
@@ -114,7 +119,7 @@ func main() {
 
 func processWorker(jobs <-chan gopacket.Packet, results chan<- []byte) {
 	for packet := range jobs {
-		results <- processPacket(packet)
+		results <- processPacket(packet) //member function in struct 
 	}
 	close(results)
 }
@@ -144,64 +149,30 @@ func sendPackets(data []byte) MLServerResponse {
 
 }
 
+
 func processPacket(packet gopacket.Packet) []byte {
-	var iplayerinterface IPLayer
-	var tcplayerinterface TCPLayer
+	var iplayerinterface model.IPLayer
+	var tcplayerinterface model.TCPLayer
 	iplayer := packet.Layer(layers.LayerTypeIPv4)
-	if iplayer != nil {
-		ip, _ := iplayer.(*layers.IPv4)
-		iplayerinterface = IPLayer{
-			SrcIP:      ip.SrcIP.String(),
-			DstIP:      ip.DstIP.String(),
-			Version:    ip.Version,
-			IHL:        ip.IHL,
-			TOS:        ip.TOS,
-			Length:     ip.Length,
-			ID:         ip.Id,
-			Flags:      ip.Flags.String(),
-			FragOffset: ip.FragOffset,
-			TTL:        ip.TTL,
-		}
-
-	}
+	fmt.Printf("%T", iplayer)
+	//if iplayer != nil {processIPlayer(iplayer)}
 	tcplayer := packet.Layer(layers.LayerTypeTCP)
-	if tcplayer != nil {
-		tcp, _ := tcplayer.(*layers.TCP)
-
-		tcplayerinterface = TCPLayer{
-			SrcPort:      tcp.SrcPort.String(),
-			DstPost:      tcp.DstPort.String(),
-			Seq:          tcp.Seq,
-			Ack:          tcp.Ack,
-			DataOffset:   tcp.DataOffset,
-			Window:       tcp.Window,
-			Checksum:     tcp.Checksum,
-			Urgent:       tcp.Urgent,
-			HeaderLength: len(tcp.Contents),
-			FlagFIN:      tcp.FIN,
-			FlagSYN:      tcp.SYN,
-			FlagRST:      tcp.RST,
-			FlagPSH:      tcp.PSH,
-			FlagACK:      tcp.ACK,
-			FlagURG:      tcp.URG,
-			FlagECE:      tcp.ECE,
-			FlagCWR:      tcp.CWR,
-			FlagNS:       tcp.NS,
-		}
-
-	}
-	var data struct {
-		ProcessedPacket Packet
-		RawPacket       string
-	}
-	data.ProcessedPacket = Packet{
+	//if tcplayer != nil {processTCPlayer(tcplayer) }
+	model.PacketStatus.ProcessedPacket = model.Packet{
 		IPLayer:  iplayerinterface,
 		TCPLayer: tcplayerinterface,
 	}
-	data.RawPacket = packet.String()
+	model.PacketStatus.RawPacket = packet.String()
 	dataJSON, _ := json.Marshal(data)
 	return dataJSON
 
+}
+
+type MLServerResponse struct {
+	Flag    uint8
+	IP      string
+	Message string
+	Err     error
 }
 
 func blockIP(IP string) {
