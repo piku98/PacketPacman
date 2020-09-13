@@ -6,57 +6,67 @@ import (
 	"os/exec"
 	"sync"
 	"time"
-
+	
+        "gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/model"
+        //"gitlab.com/clientsidetest/model" 
 	"github.com/google/gopacket/layers"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/controllers"
 )
+/*
+func processIPlayer(// see type) 
+{
+	ip, _ := iplayer.(*layers.IPv4)
+		iplayerinterface = IPLayer{
+			SrcIP:      ip.SrcIP.String(),
+			DstIP:      ip.DstIP.String(),
+			Version:    ip.Version,
+			IHL:        ip.IHL,
+			TOS:        ip.TOS,
+			Length:     ip.Length,
+			ID:         ip.Id,
+			Flags:      ip.Flags.String(),
+			FragOffset: ip.FragOffset,
+			TTL:        ip.TTL,
+		}
 
-type Packet struct {
-	IPLayer  IPLayer
-	TCPLayer TCPLayer
+
 }
 
-type IPLayer struct {
-	SrcIP      string
-	DstIP      string
-	Version    uint8
-	IHL        uint8
-	TOS        uint8
-	Length     uint16
-	ID         uint16
-	Flags      string
-	FragOffset uint16
-	TTL        uint8
-}
+func processTCPlayer()
+{
 
-type TCPLayer struct {
-	SrcPort      string
-	DstPost      string
-	Seq          uint32
-	Ack          uint32
-	DataOffset   uint8
-	Window       uint16
-	Checksum     uint16
-	Urgent       uint16
-	HeaderLength int
-	FlagFIN      bool
-	FlagSYN      bool
-	FlagRST      bool
-	FlagPSH      bool
-	FlagACK      bool
-	FlagURG      bool
-	FlagECE      bool
-	FlagCWR      bool
-	FlagNS       bool
-}
+	tcp, _ := tcplayer.(*layers.TCP)
+
+		tcplayerinterface = TCPLayer{
+			SrcPort:      tcp.SrcPort.String(),
+			DstPost:      tcp.DstPort.String(),
+			Seq:          tcp.Seq,
+			Ack:          tcp.Ack,
+			DataOffset:   tcp.DataOffset,
+			Window:       tcp.Window,
+			Checksum:     tcp.Checksum,
+			Urgent:       tcp.Urgent,
+			HeaderLength: len(tcp.Contents),
+			FlagFIN:      tcp.FIN,
+			FlagSYN:      tcp.SYN,
+			FlagRST:      tcp.RST,
+			FlagPSH:      tcp.PSH,
+			FlagACK:      tcp.ACK,
+			FlagURG:      tcp.URG,
+			FlagECE:      tcp.ECE,
+			FlagCWR:      tcp.CWR,
+			FlagNS:       tcp.NS,
+		}
+
 
 type ProcessedAndRawData struct {
 	ProcessedPacket Packet
 	RawPacket       string
 }
+ */
 
 func main() {
 	var wg sync.WaitGroup
@@ -78,7 +88,7 @@ func main() {
 	go networkWorker(networkJobs, networkResults)
 	go networkWorker(networkJobs, networkResults)
 
-	handle, err := pcap.OpenLive("wlp2s0", 1024, false, time.Second*1)
+	handle, err := pcap.OpenLive("eth0", 1024, false, time.Second*1) //support for various interfaces
 	if err != nil {
 		panic(err)
 	}
@@ -189,6 +199,13 @@ func processPacket(packet gopacket.Packet) ProcessedAndRawData {
 	}
 	return data
 
+}
+
+type MLServerResponse struct {
+	Flag    uint8
+	IP      string
+	Message string
+	Err     error
 }
 
 func blockIP(IP string) {
