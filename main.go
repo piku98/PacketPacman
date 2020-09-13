@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/models"
-	model "gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/models"
 
 	"github.com/google/gopacket/layers"
 
@@ -18,7 +17,7 @@ import (
 )
 
 type ProcessedAndRawData struct {
-	ProcessedPacket model.Packet
+	ProcessedPacket models.Packet
 	RawPacket       string
 }
 
@@ -55,12 +54,12 @@ func main() {
 		close(processPacketJobs)
 	}()
 
-	go func() {
+	/* go func() {
 		for packetData := range processPacketlevel1Results {
 			networkJobs <- packetData
 		}
 		close(networkJobs)
-	}()
+	}() */
 
 	go func() {
 		for json := range processPacketlevel2Results {
