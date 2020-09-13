@@ -17,6 +17,39 @@ import (
 	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/controllers"
 )
 
+<<<<<<< HEAD
+=======
+
+}
+
+func processTCPlayer()
+{
+
+	tcp, _ := tcplayer.(*layers.TCP)
+
+		tcplayerinterface = TCPLayer{
+			SrcPort:      tcp.SrcPort.String(),
+			DstPost:      tcp.DstPort.String(),
+			Seq:          tcp.Seq,
+			Ack:          tcp.Ack,
+			DataOffset:   tcp.DataOffset,
+			Window:       tcp.Window,
+			Checksum:     tcp.Checksum,
+			Urgent:       tcp.Urgent,
+			HeaderLength: len(tcp.Contents),
+			FlagFIN:      tcp.FIN,
+			FlagSYN:      tcp.SYN,
+			FlagRST:      tcp.RST,
+			FlagPSH:      tcp.PSH,
+			FlagACK:      tcp.ACK,
+			FlagURG:      tcp.URG,
+			FlagECE:      tcp.ECE,
+			FlagCWR:      tcp.CWR,
+			FlagNS:       tcp.NS,
+		}
+
+
+>>>>>>> 1b757a12db0c91303b14f136aea74d9bcf932f0a
 type ProcessedAndRawData struct {
 	ProcessedPacket model.Packet
 	RawPacket       string
@@ -152,6 +185,17 @@ func processPacket(packet gopacket.Packet) ProcessedAndRawData {
 		RawPacket: packet.String(),
 	}
 	return data
+<<<<<<< HEAD
+=======
+
+}
+
+type MLServerResponse struct {
+	Flag    uint8
+	IP      string
+	Message string
+	Err     error
+>>>>>>> 1b757a12db0c91303b14f136aea74d9bcf932f0a
 }
 
 func blockIP(IP string) {
