@@ -152,17 +152,6 @@ func processPacket(packet gopacket.Packet) ProcessedAndRawData {
 		RawPacket: packet.String(),
 	}
 	return data
-<<<<<<< HEAD
-=======
-
-}
-
-type MLServerResponse struct {
-	Flag    uint8
-	IP      string
-	Message string
-	Err     error
->>>>>>> 1b757a12db0c91303b14f136aea74d9bcf932f0a
 }
 
 func blockIP(IP string) {
