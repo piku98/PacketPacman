@@ -7,54 +7,18 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/model"
+
 	"github.com/google/gopacket/layers"
+	"gitlab.com/clientsidetest/model"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/controllers"
 )
 
-type Packet struct {
-	IPLayer  IPLayer
-	TCPLayer TCPLayer
-}
-
-type IPLayer struct {
-	SrcIP      string
-	DstIP      string
-	Version    uint8
-	IHL        uint8
-	TOS        uint8
-	Length     uint16
-	ID         uint16
-	Flags      string
-	FragOffset uint16
-	TTL        uint8
-}
-
-type TCPLayer struct {
-	SrcPort      string
-	DstPost      string
-	Seq          uint32
-	Ack          uint32
-	DataOffset   uint8
-	Window       uint16
-	Checksum     uint16
-	Urgent       uint16
-	HeaderLength int
-	FlagFIN      bool
-	FlagSYN      bool
-	FlagRST      bool
-	FlagPSH      bool
-	FlagACK      bool
-	FlagURG      bool
-	FlagECE      bool
-	FlagCWR      bool
-	FlagNS       bool
-}
-
 type ProcessedAndRawData struct {
-	ProcessedPacket Packet
+	ProcessedPacket model.Packet
 	RawPacket       string
 }
 
@@ -78,7 +42,7 @@ func main() {
 	go networkWorker(networkJobs, networkResults)
 	go networkWorker(networkJobs, networkResults)
 
-	handle, err := pcap.OpenLive("wlp2s0", 1024, false, time.Second*1)
+	handle, err := pcap.OpenLive("eth0", 1024, false, time.Second*1) //support for various interfaces
 	if err != nil {
 		panic(err)
 	}
@@ -188,7 +152,6 @@ func processPacket(packet gopacket.Packet) ProcessedAndRawData {
 		RawPacket: packet.String(),
 	}
 	return data
-
 }
 
 func blockIP(IP string) {
