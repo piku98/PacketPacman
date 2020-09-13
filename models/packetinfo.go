@@ -1,11 +1,9 @@
-package model
-
+package models
 
 type Packet struct {
 	IPLayer  IPLayer
 	TCPLayer TCPLayer
 }
-
 
 type IPLayer struct {
 	SrcIP      string
@@ -49,6 +47,6 @@ type MLServerResponse struct {
 }
 
 type PacketStatus struct {
-        ProcessedPacket Packet
+	ProcessedPacket Packet
 	RawPacket       string
 }

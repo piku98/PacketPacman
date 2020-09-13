@@ -1,13 +1,10 @@
 package controllers
 
-type MLServerResponse struct {
-	Flag    uint8
-	IP      string
-	Message string
-	Err     error
-}
+import (
+	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/models"
+)
 
-func SendPackets(data []byte) MLServerResponse {
+func SendPackets(data []byte) models.MLServerResponse {
 	/* req, _ := http.NewRequest("POST", "http://localhost:4000", bytes.NewBuffer(data))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -17,11 +14,11 @@ func SendPackets(data []byte) MLServerResponse {
 		log.Fatal(err)
 		return MLServerResponse{Err: err}
 	}
-	serverResponse := MLServerResponse{}
+	serverResponse := models.MLServerResponse{}
 	responseBody, _ := ioutil.ReadAll(resp.Body)
 	json.Unmarshal(responseBody, &serverResponse) */
 
-	serverResponse := MLServerResponse{}
+	serverResponse := models.MLServerResponse{}
 	return serverResponse
 
 }

@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/model"
+	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/models"
+	model "gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/models"
 
 	"github.com/google/gopacket/layers"
-	"gitlab.com/clientsidetest/model"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
@@ -31,7 +31,7 @@ func main() {
 	processPacketlevel2Results := make(chan []byte)
 
 	networkJobs := make(chan []byte)
-	networkResults := make(chan controllers.MLServerResponse)
+	networkResults := make(chan models.MLServerResponse)
 
 	//worker go functions (threads) for processing packet the data. Extracts data from packets in the queue from the channel concurrently.
 	//Increase number of these functions depending on the load. In high load conditions 4 or 5 concurrent workers maybe required
@@ -90,7 +90,7 @@ func processWorker(jobs <-chan gopacket.Packet, processPacketlevel1Results chan<
 	close(processPacketlevel2Results)
 }
 
-func networkWorker(jobs <-chan []byte, results chan<- controllers.MLServerResponse) {
+func networkWorker(jobs <-chan []byte, results chan<- models.MLServerResponse) {
 	for bytes := range jobs {
 		results <- controllers.SendPackets(bytes)
 	}
@@ -98,12 +98,12 @@ func networkWorker(jobs <-chan []byte, results chan<- controllers.MLServerRespon
 }
 
 func processPacket(packet gopacket.Packet) ProcessedAndRawData {
-	var iplayerinterface IPLayer
-	var tcplayerinterface TCPLayer
+	var iplayerinterface models.IPLayer
+	var tcplayerinterface models.TCPLayer
 	iplayer := packet.Layer(layers.LayerTypeIPv4)
 	if iplayer != nil {
 		ip, _ := iplayer.(*layers.IPv4)
-		iplayerinterface = IPLayer{
+		iplayerinterface = models.IPLayer{
 			SrcIP:      ip.SrcIP.String(),
 			DstIP:      ip.DstIP.String(),
 			Version:    ip.Version,
@@ -122,7 +122,7 @@ func processPacket(packet gopacket.Packet) ProcessedAndRawData {
 	if tcplayer != nil {
 		tcp, _ := tcplayer.(*layers.TCP)
 
-		tcplayerinterface = TCPLayer{
+		tcplayerinterface = models.TCPLayer{
 			SrcPort:      tcp.SrcPort.String(),
 			DstPost:      tcp.DstPort.String(),
 			Seq:          tcp.Seq,
@@ -145,7 +145,7 @@ func processPacket(packet gopacket.Packet) ProcessedAndRawData {
 
 	}
 	data := ProcessedAndRawData{
-		ProcessedPacket: Packet{
+		ProcessedPacket: models.Packet{
 			IPLayer:  iplayerinterface,
 			TCPLayer: tcplayerinterface,
 		},
@@ -169,7 +169,7 @@ func blockIP(IP string) {
 	}
 }
 
-func processResponse(resp MLServerResponse) {
+func processResponse(resp models.MLServerResponse) {
 	//check for error
 	//check flag
 	//check ip
