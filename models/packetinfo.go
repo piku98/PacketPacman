@@ -1,5 +1,10 @@
 package models
 
+type ProcessedAndRawPacketData struct {
+	ProcessedPacket Packet
+	RawPacket       string
+}
+
 type Packet struct {
 	IPLayer  IPLayer
 	TCPLayer TCPLayer
@@ -20,7 +25,7 @@ type IPLayer struct {
 
 type TCPLayer struct {
 	SrcPort      string
-	DstPost      string
+	DstPort      string
 	Seq          uint32
 	Ack          uint32
 	DataOffset   uint8
@@ -37,16 +42,4 @@ type TCPLayer struct {
 	FlagECE      bool
 	FlagCWR      bool
 	FlagNS       bool
-}
-
-type MLServerResponse struct {
-	Flag    uint8
-	IP      string
-	Message string
-	Err     error
-}
-
-type PacketStatus struct {
-	ProcessedPacket Packet
-	RawPacket       string
 }

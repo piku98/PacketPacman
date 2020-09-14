@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"sync"
-	"time"
 
 	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/models"
 
@@ -13,35 +11,36 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
+	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/MLInterface"
 	"gitlab.com/grey_scale/packetpacman/tests-and-analysis/clientsidetest.git/controllers"
 )
 
-type ProcessedAndRawData struct {
-	ProcessedPacket models.Packet
-	RawPacket       string
-}
-
 func main() {
+
+	BUFFER_SIZE := 100
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	processPacketJobs := make(chan gopacket.Packet)
-	processPacketlevel1Results := make(chan ProcessedAndRawData)
-	processPacketlevel2Results := make(chan []byte)
+	processPacketJobs := make(chan gopacket.Packet, BUFFER_SIZE)
+	processPacketlevel1Results := make(chan models.ProcessedAndRawPacketData, BUFFER_SIZE)
+	processPacketlevel2Results := make(chan []byte, BUFFER_SIZE)
 
-	networkJobs := make(chan []byte)
-	networkResults := make(chan models.MLServerResponse)
+	level1Jobs := make(chan models.ProcessedAndRawPacketData, BUFFER_SIZE)
+	level1Results := make(chan MLInterface.PacketAnalysisResult, BUFFER_SIZE)
 
-	//worker go functions (threads) for processing packet the data. Extracts data from packets in the queue from the channel concurrently.
-	//Increase number of these functions depending on the load. In high load conditions 4 or 5 concurrent workers maybe required
+	//networkJobs := make(chan []byte)
+	//networkResults := make(chan models.MLServerResponse)
+
 	go processWorker(processPacketJobs, processPacketlevel1Results, processPacketlevel2Results)
 	go processWorker(processPacketJobs, processPacketlevel1Results, processPacketlevel2Results)
 
-	//worker go functions for handling requests to ML server. Increase number of functions for high load.
-	go networkWorker(networkJobs, networkResults)
-	go networkWorker(networkJobs, networkResults)
+	go levelOneInterface(level1Jobs, level1Results)
+	go levelOneInterface(level1Jobs, level1Results)
 
-	handle, err := pcap.OpenLive("eth0", 1024, false, time.Second*1) //support for various interfaces
+	//go networkWorker(networkJobs, networkResults)
+	//go networkWorker(networkJobs, networkResults)
+
+	handle, err := pcap.OpenLive("wlp2s0", 1600, true, pcap.BlockForever)
 	if err != nil {
 		panic(err)
 	}
@@ -54,39 +53,58 @@ func main() {
 		close(processPacketJobs)
 	}()
 
-	/* go func() {
+	go func() {
 		for packetData := range processPacketlevel1Results {
-			networkJobs <- packetData
+			level1Jobs <- packetData
 		}
-		close(networkJobs)
-	}() */
+		close(level1Jobs)
+	}()
 
 	go func() {
+		for results := range level1Results {
+			fmt.Println(results)
+		}
+	}()
+
+	/* go func() {
 		for json := range processPacketlevel2Results {
 			networkJobs <- json
 		}
 		close(networkJobs)
-	}()
+	}() */
 
-	go func() {
+	/* go func() {
 		for resp := range networkResults {
 			//fmt.Println(resp)
 			processResponse(resp)
 		}
-	}()
+	}() */
 	wg.Wait()
 
 }
 
-func processWorker(jobs <-chan gopacket.Packet, processPacketlevel1Results chan<- ProcessedAndRawData, processPacketlevel2Results chan<- []byte) {
+func processWorker(jobs <-chan gopacket.Packet, processPacketlevel1Results chan<- models.ProcessedAndRawPacketData, processPacketlevel2Results chan<- []byte) {
 	for packet := range jobs {
 		data := processPacket(packet)
 		processPacketlevel1Results <- data
-		dataJSON, _ := json.Marshal(data)
-		processPacketlevel2Results <- dataJSON
+		//dataJSON, _ := json.Marshal(data)
+		//processPacketlevel2Results <- dataJSON
 	}
 	close(processPacketlevel1Results)
-	close(processPacketlevel2Results)
+	//close(processPacketlevel2Results)
+}
+
+func levelOneInterface(jobs <-chan models.ProcessedAndRawPacketData, results chan<- MLInterface.PacketAnalysisResult) {
+	for data := range jobs {
+		temp := MLInterface.PacketAnalysisResult{
+			SrcIP:  data.ProcessedPacket.IPLayer.SrcIP,
+			SrcPrt: data.ProcessedPacket.TCPLayer.SrcPort,
+			DstPrt: data.ProcessedPacket.TCPLayer.DstPort,
+			Flag:   0,
+		}
+		results <- temp
+	}
+	close(results)
 }
 
 func networkWorker(jobs <-chan []byte, results chan<- models.MLServerResponse) {
@@ -96,7 +114,7 @@ func networkWorker(jobs <-chan []byte, results chan<- models.MLServerResponse) {
 	close(results)
 }
 
-func processPacket(packet gopacket.Packet) ProcessedAndRawData {
+func processPacket(packet gopacket.Packet) models.ProcessedAndRawPacketData {
 	var iplayerinterface models.IPLayer
 	var tcplayerinterface models.TCPLayer
 	iplayer := packet.Layer(layers.LayerTypeIPv4)
@@ -116,14 +134,14 @@ func processPacket(packet gopacket.Packet) ProcessedAndRawData {
 		}
 
 	}
-	fmt.Println(iplayerinterface.SrcIP)
+
 	tcplayer := packet.Layer(layers.LayerTypeTCP)
 	if tcplayer != nil {
 		tcp, _ := tcplayer.(*layers.TCP)
 
 		tcplayerinterface = models.TCPLayer{
 			SrcPort:      tcp.SrcPort.String(),
-			DstPost:      tcp.DstPort.String(),
+			DstPort:      tcp.DstPort.String(),
 			Seq:          tcp.Seq,
 			Ack:          tcp.Ack,
 			DataOffset:   tcp.DataOffset,
@@ -143,7 +161,7 @@ func processPacket(packet gopacket.Packet) ProcessedAndRawData {
 		}
 
 	}
-	data := ProcessedAndRawData{
+	data := models.ProcessedAndRawPacketData{
 		ProcessedPacket: models.Packet{
 			IPLayer:  iplayerinterface,
 			TCPLayer: tcplayerinterface,
