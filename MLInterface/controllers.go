@@ -24,7 +24,5 @@ func (c *Controller) SelectModels(types map[string]int) {
 }
 
 func (c *Controller) CommunicationLine(jobs <-chan models.ProcessedAndRawPacketData, results chan<- interface{}) {
-	for data := range jobs {
 
-	}
 }
